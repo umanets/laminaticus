@@ -1,0 +1,13 @@
+{
+  "name": "report-watcher",
+  "version": "1.0.0",
+  "description": "Watches /data/report.xml and transforms it to JSON",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "xml2js": "^0.4.23"
+  }
+}

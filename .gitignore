@@ -1,0 +1,8 @@
+.env
+node_modules
+dist
+one-s-node
+data
+demo-telegram-bot/todo.drawio
+node32
+logs
