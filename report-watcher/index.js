@@ -17,8 +17,8 @@ const pool = new Pool({
 
 const dataDir = path.resolve(__dirname, '../data');
 if (!fs.existsSync(dataDir)) {
-  console.error(`Data directory not found: ${dataDir}`);
-  process.exit(1);
+  fs.mkdirSync(dataDir, { recursive: true });
+  console.log(`✅ Created data directory: ${dataDir}`);
 }
 
 const xmlFile = path.join(dataDir, 'report.xml');

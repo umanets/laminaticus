@@ -7,15 +7,66 @@ interface MappingEntry {
 }
 
 export class MappingService {
+  // Path to the mappings JSON file
+  private static filePath: string = path.resolve(__dirname, '../../data/mappings.json');
+  // In-memory cache of mappings
   private static mappings: Record<string, MappingEntry> = MappingService.loadMappings();
+  // File system watcher for runtime updates
+  private static watcher?: fs.FSWatcher;
 
+  /**
+   * Load mappings from file, handling missing files and errors.
+   * Also initializes a watcher to reload on changes.
+   */
   private static loadMappings(): Record<string, MappingEntry> {
-    const file = path.resolve(__dirname, '../../data/mappings.json');
-    const raw = fs.readFileSync(file, 'utf-8');
-    const data = JSON.parse(raw) as {
-      keyMappings: Record<string, MappingEntry>;
-    };
-    return data.keyMappings;
+    const file = MappingService.filePath;
+    let mappings: Record<string, MappingEntry> = {};
+    if (fs.existsSync(file)) {
+      try {
+        const raw = fs.readFileSync(file, 'utf-8');
+        const data = JSON.parse(raw) as { keyMappings: Record<string, MappingEntry> };
+        mappings = data.keyMappings;
+      } catch (err) {
+        console.error(`[MappingService] Error loading mappings: ${err}`);
+      }
+    } else {
+      console.warn(`[MappingService] mappings.json not found at ${file}, starting with empty mappings`);
+    }
+    MappingService.watchMappings();
+    return mappings;
+  }
+
+  /**
+   * Watch the mappings directory for changes to reload mappings at runtime.
+   */
+  private static watchMappings(): void {
+    if (MappingService.watcher) {
+      return;
+    }
+    const dir = path.dirname(MappingService.filePath);
+    try {
+      MappingService.watcher = fs.watch(dir, (eventType, filename) => {
+        if (!filename || filename !== path.basename(MappingService.filePath)) {
+          return;
+        }
+        const filePath = MappingService.filePath;
+        if (fs.existsSync(filePath)) {
+          try {
+            const raw = fs.readFileSync(filePath, 'utf-8');
+            const data = JSON.parse(raw) as { keyMappings: Record<string, MappingEntry> };
+            MappingService.mappings = data.keyMappings;
+            console.log(`[MappingService] Reloaded mappings (${Object.keys(MappingService.mappings).length} entries)`);
+          } catch (err) {
+            console.error(`[MappingService] Error reloading mappings: ${err}`);
+          }
+        } else {
+          MappingService.mappings = {};
+          console.log(`[MappingService] mappings.json removed, cleared mappings`);
+        }
+      });
+    } catch (err) {
+      console.error(`[MappingService] Error watching mappings directory: ${err}`);
+    }
   }
 
   /**
