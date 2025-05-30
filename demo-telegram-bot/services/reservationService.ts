@@ -9,6 +9,7 @@ export interface ReservationRecord {
   key: string;
   code: string;
   reserv_qty: number;
+  unit: string;
   /**
    * Reservation status: ongoing, approved, declined, processed
    */
@@ -64,10 +65,11 @@ export class ReservationService {
     key: string,
     code: string,
     reserv_qty: number,
+    unit: string,
     status: 'ongoing' | 'approved' | 'declined' | 'processed' = 'ongoing'
   ): void {
     const data = this.load();
-    data.push({ userId, key, code, reserv_qty, status });
+    data.push({ userId, key, code, reserv_qty, unit, status });
     this.save();
   }
   /**

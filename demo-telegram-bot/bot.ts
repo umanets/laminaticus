@@ -147,7 +147,7 @@ bot.hears('Резерви', async (ctx) => {
     const idx = allRecs.indexOf(rec);
     const userRec = UserService.getUser(rec.userId);
     const displayName = userRec ? userRec.displayName : `${rec.userId}`;
-    const items = DataService.getItems(rec.key);
+    const items = await DataService.getItems(rec.key);
     const item = items.find(i => i.code === rec.code);
     const itemName = item ? item.name : rec.code;
     const msg = `<b>${displayName}</b>\n${itemName} - ${rec.reserv_qty}`;
@@ -192,7 +192,7 @@ bot.action(/select_(.+)/, async (ctx) => {
     await ctx.answerCbQuery('Ошибка ключа');
     return;
   }
-  const items = DataService.getItems(key);
+  const items = await DataService.getItems(key);
   const item = items.find(i => i.code === code);
   if (!item) {
     await ctx.answerCbQuery('Товар не знайдено.');
@@ -211,7 +211,7 @@ bot.action(/select_(.+)/, async (ctx) => {
     [Markup.button.callback('⬅️ Назад', 'back_to_action')]
   ]);
   await ctx.editMessageText(
-    `Ви обрали: ${item.name}\nЗалишок: ${available}`,
+    `Ви обрали: ${item.name}\nЗалишок: ${available} ${item.unit}`,
     buttons as any
   );
 });
@@ -279,7 +279,7 @@ bot.action(/admin_block_(\d+)/, async (ctx) => {
 });
 
 // --- Wizard Handler for authorized users
-bot.on('text', (ctx) => {
+bot.on('text', async (ctx) => {
   const userId = ctx.from?.id;
   if (!userId) return;
   const uiMgr = getUIMgr(ctx);
@@ -353,15 +353,16 @@ bot.on('text', (ctx) => {
         const all = ReservationService.getAll();
         const mine = all.filter(r => r.userId === userId && r.status === 'ongoing');
         if (mine.length === 0) {
-          ctx.reply('Немає резервів на очікуванні.');
+          await ctx.reply('Немає резервів на очікуванні.');
         } else {
-          const lines = mine.map(r => {
-            const items = DataService.getItems(r.key);
+          const lines: string[] = [];
+          for (const r of mine) {
+            const items = await DataService.getItems(r.key);
             const item = items.find(i => i.code === r.code);
             const name = item ? item.name : r.code;
-            return `${name} — ${r.reserv_qty}`;
-          });
-          ctx.reply(lines.join('\n'));
+            lines.push(`${name} — ${r.reserv_qty} ${r.unit}`);
+          }
+          await ctx.reply(lines.join('\n'));
         }
         getUIMgr(ctx).getMainMenuKeyboard(ctx);
         return;
@@ -435,7 +436,7 @@ bot.on('text', (ctx) => {
         UserStateService.initialize(userId);
         break;
       }
-      const results = DataService.searchItems(key, query);
+      const results = await DataService.searchItems(key, query);
       if (results.length > 0) {
         // build inline buttons for each found item
         const buttons = results.map(item => [
@@ -468,12 +469,12 @@ bot.on('text', (ctx) => {
       const catalog = state.selectedCatalog!;
       const brand = state.selectedBrand!;
       const mapKey = MappingService.getKey(catalog, brand)!;
-      const allItems = DataService.getItems(mapKey);
+      const allItems = await DataService.getItems(mapKey);
       const selectedItem = allItems.find(i => i.code === selCode)!;
       const remains = selectedItem.remains;
       if (qty > remains) {
         // Cannot reserve more than available: offer retry or back
-        const msg = `Неможливо зарезервувати ${qty} шт. товару "${selectedItem.name}", залишилося тільки ${remains}.`;
+        const msg = `Неможливо зарезервувати ${qty} шт. товару "${selectedItem.name}", залишилося тільки ${remains} ${selectedItem.unit}.`;
         ctx.reply(
           msg,
           Markup.inlineKeyboard([
@@ -491,11 +492,11 @@ bot.on('text', (ctx) => {
       reservations[userId].push(newRes);
       // Persist reservation to file
       const mapKey2 = mapKey; // reuse key for persistence
-      ReservationService.addReservation(userId, mapKey2, selCode, qty);
+      ReservationService.addReservation(userId, mapKey2, selCode, qty, selectedItem.unit);
       // Confirm reservation and return to actions menu
       UserStateService.setState(userId, 'chooseAction');
       ctx.reply(
-        `Зарезервовано ${qty} шт. товару "${itemName}".`,
+        `Зарезервовано ${qty} ${selectedItem.unit} товару "${itemName}".`,
         uiMgr.getMainMenuKeyboard(ctx)
       );
       break;

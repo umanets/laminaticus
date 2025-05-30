@@ -5,4 +5,9 @@ one-s-node
 data
 demo-telegram-bot/todo.drawio
 node32
+# Logs
 logs
+
+# Ignore Postgres host storage except init scripts
+/db/*
+!/db/init/

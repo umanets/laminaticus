@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { Pool } from 'pg';
 
 /**
  * DataItem represents a product for display and reservation.
@@ -11,58 +10,56 @@ export interface DataItem {
   name: string;
   /** Available quantity remaining. */
   remains: number;
+  /** Unit of quantity remaining. */
+  unit: string;
 }
 
-/**
- * Internal representation of the raw product record from report.json
- */
-interface ProductRecord {
-  id: string;
-  tag: string;
-  name: string;
-  article: string;
-  quantity: string;
-  unit: string;
-  category: string;
-  brand: string;
-}
+
+// Initialize Postgres connection pool; configure via PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE
+const pool = new Pool({
+  host: process.env.PGHOST || 'localhost',
+  port: process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 5432,
+  user: process.env.PGUSER || 'laminaticus',
+  password: process.env.PGPASSWORD || 'laminaticus_pass',
+  database: process.env.PGDATABASE || 'laminaticus',
+});
 
 export class DataService {
   /**
-   * Load fresh product records from report.json on each call.
+   * Return all items for given tag key from Postgres.
    */
-  private static loadData(): ProductRecord[] {
-    const file = path.resolve(__dirname, '../../data/report.json');
-    const raw = fs.readFileSync(file, 'utf-8');
-    return JSON.parse(raw) as ProductRecord[];
+  static async getItems(key: string): Promise<DataItem[]> {
+    const sql = `
+      SELECT article AS code, name, quantity, unit
+      FROM reports
+      WHERE tag = $1
+    `;
+    const res = await pool.query(sql, [key]);
+    return res.rows.map(r => ({
+      code: r.code,
+      name: r.name,
+      remains: parseFloat(r.quantity),
+      unit: r.unit
+    }));
   }
 
   /**
-   * Return all items for given key.
+   * Search items by code or name containing query (case-insensitive) in Postgres.
    */
-  /**
-   * Return all items for given mapping key (product.tag).
-   */
-  static getItems(key: string): DataItem[] {
-    // Reload data on each call to pick up latest report.json
-    const records = DataService.loadData();
-    return records
-      .filter(rec => rec.tag === key)
-      .map(rec => ({
-        code: rec.article,
-        name: rec.name,
-        remains: parseFloat(rec.quantity)
-      }));
-  }
-
-  /**
-   * Search items by code or name containing query (case-insensitive).
-   */
-  static searchItems(key: string, query: string): DataItem[] {
-    const items = DataService.getItems(key);
-    const q = query.toLowerCase();
-    return items.filter(i =>
-      i.code.toLowerCase().includes(q) || i.name.toLowerCase().includes(q)
-    );
+  static async searchItems(key: string, query: string): Promise<DataItem[]> {
+    const q = `%${query.toLowerCase()}%`;
+    const sql = `
+      SELECT article AS code, name, quantity, unit
+      FROM reports
+      WHERE tag = $1
+        AND (LOWER(article) LIKE $2 OR LOWER(name) LIKE $2)
+    `;
+    const res = await pool.query(sql, [key, q]);
+    return res.rows.map(r => ({
+      code: r.code,
+      name: r.name,
+      remains: parseFloat(r.quantity),
+      unit: r.unit
+    }));
   }
 }
