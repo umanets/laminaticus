@@ -20,7 +20,10 @@ const services = [
     cwd: path.join(baseDir, 'one-s-rest'),
     command: path.join(baseDir, 'node32', 'node.exe'),
     args: ['index.js'],
-    shell: false
+    shell: false,
+    env: {
+      NODE_PATH: path.join(baseDir, 'prebuild')
+    }
   },
   {
     name: 'REPORT',
@@ -47,11 +50,15 @@ const maxNameLen = Math.max(...services.map(s => s.name.length));
 const labelWidth = maxNameLen + errorSuffix.length + 1;
 
 // Start each service
-services.forEach(({ name, cwd, command, args, shell }) => {
+services.forEach(({ name, cwd, command, args, shell, env }) => {
   const options = {
     cwd,
     shell,
-    stdio: ['ignore', 'pipe', 'pipe']
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      ...(env || {})
+    }
   };
   const child = spawn(command, shell ? [] : args, options);
   const normalLabel = name.padEnd(labelWidth);

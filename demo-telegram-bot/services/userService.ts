@@ -21,20 +21,57 @@ export interface UserRecord {
  */
 export class UserService {
   private static filePath = path.resolve(__dirname, '../../data/users.json');
-  private static cache: UserRecord[] | null = null;
+  private static cache: UserRecord[] = [];
+  private static watcher?: fs.FSWatcher;
+  private static reloadTimer?: NodeJS.Timeout;
 
-  private static load(): UserRecord[] {
+  private static watchUsers(): void {
+    if (UserService.watcher) {
+      return;
+    }
+    const dir = path.dirname(UserService.filePath);
+    try {
+      UserService.watcher = fs.watch(dir, (eventType, filename) => {
+        if (!filename || filename !== path.basename(UserService.filePath)) {
+          return;
+        }
+        // Debounce reload in case of rapid file writes
+        if (UserService.reloadTimer) {
+          clearTimeout(UserService.reloadTimer);
+        }
+        UserService.reloadTimer = setTimeout(() => {
+          const filePath = UserService.filePath;
+          if (fs.existsSync(filePath)) {
+            try {
+              const raw = fs.readFileSync(filePath, 'utf-8');
+              const data = JSON.parse(raw) as UserRecord[];
+              UserService.cache = data;
+              console.log(`[UserService] Reloaded users (${UserService.cache.length} entries)`);
+            } catch (err) {
+              console.error(`[UserService] Error reloading mappings: ${err}`);
+            }
+          } else {
+            UserService.cache = [];
+            console.log(`[UserService] users.json removed, cleared users`);
+          }
+        }, 200);
+      });
+    } catch (err) {
+      console.error(`[UserService] Error watching users directory: ${err}`);
+    }
+  }
+
+  static loadUsers(): UserRecord[] {
     // Always reload from users.json to reflect any external or programmatic changes
     try {
-      if (fs.existsSync(this.filePath)) {
+      if (this.cache.length === 0 && fs.existsSync(this.filePath)) {
         const raw = fs.readFileSync(this.filePath, 'utf-8');
         this.cache = JSON.parse(raw) as UserRecord[];
-      } else {
-        this.cache = [];
       }
     } catch {
       this.cache = [];
     }
+    UserService.watchUsers();
     return this.cache;
   }
 
@@ -60,7 +97,7 @@ export class UserService {
     displayName: string,
     status: UserStatus = 'requireAccess'
   ): void {
-    const users = this.load();
+    const users = this.loadUsers();
     if (users.find(u => u.userId === userId)) return;
     const record: UserRecord = {
       userId,
@@ -76,7 +113,7 @@ export class UserService {
    * Get user record by userId
    */
   static getUser(userId: number): UserRecord | undefined {
-    const users = this.load();
+    const users = this.loadUsers();
     return users.find(u => u.userId === userId);
   }
 
@@ -84,7 +121,7 @@ export class UserService {
    * Update status of existing user
    */
   static updateStatus(userId: number, status: UserStatus): void {
-    const users = this.load();
+    const users = this.loadUsers();
     const user = users.find(u => u.userId === userId);
     if (user) {
       user.status = status;
@@ -95,7 +132,7 @@ export class UserService {
    * Delete user record entirely (reject access).
    */
   static deleteUser(userId: number): void {
-    const users = this.load();
+    const users = this.loadUsers();
     this.cache = users.filter(u => u.userId !== userId);
     this.save();
   }
@@ -104,6 +141,8 @@ export class UserService {
    * Get all users
    */
   static getAll(): UserRecord[] {
-    return this.load();
+    return this.loadUsers();
   }
 }
+
+UserService.loadUsers();

@@ -20,6 +20,7 @@ export class UserUI implements UIManager {
       case 'chooseCatalog': {
         const catalogs = MappingService.getCatalogs();
         const buttons = catalogs.map(c => [c]);
+        buttons.push(['⬅️ Назад']);
         return Markup.keyboard(buttons).resize();
       }
       case 'chooseBrand': {
@@ -31,7 +32,7 @@ export class UserUI implements UIManager {
       }
       case 'chooseAction': {
         return Markup.keyboard([
-          ['📦 Залишок'],
+          // ['📦 Залишок'],
           ['⬅️ Назад', '🏠 Додому'],
         ]).resize();
       }

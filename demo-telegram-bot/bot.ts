@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { Telegraf, Markup, Context } from 'telegraf';
+import fs from 'fs';
 import { UIManager } from './ui/UIManager';
 import { UnauthorizedUI } from './ui/UnauthorizedUI';
 import { UserUI } from './ui/UserUI';
@@ -65,6 +66,62 @@ const bot = new Telegraf<Context>(process.env.BOT_TOKEN!);
 // Track access request state per user
 const accessRequests: Record<number, boolean> = {};
 
+/**
+ * Middleware to synchronize in-memory role with persistent UserService.
+ * If the role changed (e.g. operator updated status), reinitialize UI.
+ */
+bot.use(async (ctx, next) => {
+  const fromId = ctx.from?.id;
+  if (!fromId) {
+    return next();
+  }
+  const urec = UserService.getUser(fromId);
+  // Map persistent status to our Role
+  let desiredRole: Role;
+  if (!urec || urec.status === 'requireAccess') {
+    desiredRole = 'unauthorized';
+  } else if (urec.status === 'admin') {
+    desiredRole = 'admin';
+  } else {
+    desiredRole = 'authorized';
+  }
+  const currentRole = getRole(fromId);
+  if (currentRole !== desiredRole) {
+    // Update role and reset state for authorized users
+    userRoles[fromId] = desiredRole;
+    if (desiredRole === 'authorized') {
+      UserStateService.initialize(fromId);
+    }
+    // Send updated menu
+    await ctx.reply('Ваші права оновлено. Оновлюємо меню.', getUIMgr(ctx).getMainMenuKeyboard(ctx));
+  }
+  return next();
+});
+
+// Middleware to inform users if 1C is unavailable (error.log exists)
+const errorLogPath = path.resolve(__dirname, '../data/error.log');
+bot.use((ctx, next) => {
+  const userId = ctx.from?.id;
+  if (!userId) return next();
+  if (fs.existsSync(errorLogPath)) {
+    const role = getRole(userId);
+    if (role === 'authorized') {
+      ctx.reply('Регламентні роботи', getUIMgr(ctx).getMainMenuKeyboard(ctx));
+      return;
+    }
+    if (role === 'admin') {
+      ctx.reply(
+        'Немає зв\'язку з 1С, запустіть 1С вручну в монопольному режимі та закрийте після цього. ' +
+        'Через 5 хвилин зв\'язок з 1С повинен бути відновлений і бот почне роботу в нормальному режимі. ' +
+        'Або зв\'яжіться з розробником.',
+        getUIMgr(ctx).getMainMenuKeyboard(ctx)
+      );
+      return;
+    }
+  }
+  return next();
+});
+
 bot.start((ctx) => {
   const userId = ctx.from.id;
   saveUserName(ctx);
@@ -89,10 +146,15 @@ bot.start((ctx) => {
     );
     return;
   }
-  // Admin user: show actions menu
+  // Admin user: initialize state and show actions menu
   if (urec.status === 'admin') {
     userRoles[userId] = 'admin';
-    ctx.reply('Оберіть дію.', getUIMgr(ctx).getMainMenuKeyboard(ctx));
+    // Initialize user state for stock & reservation wizard
+    UserStateService.initialize(userId);
+    ctx.reply(
+      'Оберіть дію.',
+      getUIMgr(ctx).getMainMenuKeyboard(ctx)
+    );
     return;
   }
   // Approved (regular) user
@@ -278,6 +340,32 @@ bot.action(/admin_block_(\d+)/, async (ctx) => {
   ctx.answerCbQuery('Заблоковано');
 });
 
+async function stockSearch(text:string, state: any, ctx: any, userId: any, uiMgr: any) {
+    const query = text;
+    const catalog = state.selectedCatalog!;
+    const brand = state.selectedBrand!;
+    const key = MappingService.getKey(catalog, brand);
+    if (!key) {
+      ctx.reply('Неверный каталог или бренд.', uiMgr.getMainMenuKeyboard(ctx));
+      UserStateService.initialize(userId);
+      return
+    }
+    const results = await DataService.searchItems(key, query);
+    if (results.length > 0) {
+      // build inline buttons for each found item
+      const buttons = [
+        ...results.map(item => [Markup.button.callback(`${item.code} ${item.name}`, `select_${item.code}`)]),
+        [Markup.button.callback('⬅️ Назад', 'back_to_action')]
+      ];
+      
+      ctx.reply('Знайдені товари (Клацнiть для резервування):', Markup.inlineKeyboard(buttons));
+    } else {
+      // Nothing found -> return to action menu
+      UserStateService.setState(userId, 'chooseAction');
+      ctx.reply('Нічого не знайдено.', uiMgr.getMainMenuKeyboard(ctx));
+    }
+}
+
 // --- Wizard Handler for authorized users
 bot.on('text', async (ctx) => {
   const userId = ctx.from?.id;
@@ -345,8 +433,8 @@ bot.on('text', async (ctx) => {
     return;
   }
 
-  // Initial menu for approved users
-  if (getRole(userId) === 'authorized') {
+  // Initial menu for approved and admin users for stock & reservation wizard
+  if (getRole(userId) === 'authorized' || getRole(userId) === 'admin') {
     const stateInitial = UserStateService.getState(userId);
     if (stateInitial.state === 'initial') {
       if (text === 'Мої резерви') {
@@ -379,11 +467,16 @@ bot.on('text', async (ctx) => {
   const state = UserStateService.getState(userId);
   switch (state.state) {
     case 'chooseCatalog': {
+      if (text === '⬅️ Назад') {
+        UserStateService.setState(userId, 'initial');
+        ctx.reply('Виберіть каталог.', uiMgr.getMainMenuKeyboard(ctx));
+        break;
+      }
       const catalogs = MappingService.getCatalogs();
       if (catalogs.includes(text)) {
         UserStateService.setCatalog(userId, text);
         UserStateService.setState(userId, 'chooseBrand');
-      ctx.reply(`Каталог "${text}" обрано. Виберіть бренд.`, uiMgr.getMainMenuKeyboard(ctx));
+        ctx.reply(`Каталог "${text}" обрано. Виберіть бренд.`, uiMgr.getMainMenuKeyboard(ctx));
       } else {
         ctx.reply('Будь ласка, виберіть каталог зі списку.', uiMgr.getMainMenuKeyboard(ctx));
       }
@@ -400,7 +493,7 @@ bot.on('text', async (ctx) => {
       if (brands.includes(text)) {
         UserStateService.setBrand(userId, text);
         UserStateService.setState(userId, 'chooseAction');
-        ctx.reply(`Бренд "${text}" обрано. Виберіть дію.`, uiMgr.getMainMenuKeyboard(ctx));
+        ctx.reply(`Бренд "${text}" обрано. Виберіть дію. Будь ласка, напишіть назву або код товару для перевірки залишку. Або виберіть дію.`, uiMgr.getMainMenuKeyboard(ctx));
       } else {
         ctx.reply('Будь ласка, виберіть бренд зі списку.', uiMgr.getMainMenuKeyboard(ctx));
       }
@@ -414,40 +507,18 @@ bot.on('text', async (ctx) => {
       } else if (text === '🏠 Додому') {
         // go to catalog selection
         UserStateService.initialize(userId);
-        ctx.reply('Будь ласка, виберіть каталог.', uiMgr.getMainMenuKeyboard(ctx));
+        ctx.reply('Оберіть дію.', uiMgr.getMainMenuKeyboard(ctx));
       } else if (text === '📦 Залишок') {
         UserStateService.setState(userId, 'awaiting_stock_input');
         ctx.reply('Будь ласка, напишіть назву або код товару для перевірки залишку.', Markup.removeKeyboard());
-      } else if (text === '📝 Резервування') {
-        // TODO: implement reservation flow
-        ctx.reply('Функція резервування поки що не реалізована.', uiMgr.getMainMenuKeyboard(ctx));
       } else {
-        ctx.reply('Будь ласка, виберіть дію.', uiMgr.getMainMenuKeyboard(ctx));
+        UserStateService.setState(userId, 'awaiting_stock_input');
+        await stockSearch(text, state, ctx, userId, uiMgr)
       }
       break;
     }
     case 'awaiting_stock_input': {
-      const query = text;
-      const catalog = state.selectedCatalog!;
-      const brand = state.selectedBrand!;
-      const key = MappingService.getKey(catalog, brand);
-      if (!key) {
-        ctx.reply('Неверный каталог или бренд.', uiMgr.getMainMenuKeyboard(ctx));
-        UserStateService.initialize(userId);
-        break;
-      }
-      const results = await DataService.searchItems(key, query);
-      if (results.length > 0) {
-        // build inline buttons for each found item
-        const buttons = results.map(item => [
-          Markup.button.callback(`${item.code} ${item.name}`, `select_${item.code}`)
-        ]);
-        ctx.reply('Знайдені товари:', Markup.inlineKeyboard(buttons));
-      } else {
-        // Nothing found -> return to action menu
-        UserStateService.setState(userId, 'chooseAction');
-        ctx.reply('Нічого не знайдено.', uiMgr.getMainMenuKeyboard(ctx));
-      }
+      await stockSearch(text, state, ctx, userId, uiMgr);
       break;
     }
     case 'awaiting_reserve_input': {
