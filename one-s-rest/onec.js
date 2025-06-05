@@ -69,25 +69,25 @@ async function connect1C(userName, password, db_path) {
         clearTimeout(timer);
         initialized = true;
         const procPids = Array.isArray(msg.pids) ? msg.pids : [];
+
+        const v7 = {};
+        ['ExecuteBatch', 'ЗавершитьРаботуСистемы'].forEach(method => {
+          v7[method] = (...args) => new Promise((res, rej) => {
+            const id = nextId++;
+            pending.set(id, { res, rej });
+            child.send({ type: 'call', id, method, args });
+          });
+        });
+        // store child process and target 1C PIDs for later cleanup
+        v7._child = child;
+        v7._pids = procPids;
+
         if (!msg.connected) {
-          // failed init: kill spawned 1C processes
-          child.kill();
-          // for (const tpid of procPids) kill1CProcess(tpid);
+          child.send({ type: 'shutdown' })
           try { fs.mkdirSync(dataDir, { recursive: true }); } catch {}
           try { fs.writeFileSync(errorLogPath, `1C initialize failed connection at ${new Date().toISOString()}`); } catch {}
-          resolve({ v7: null, connected: 'false', pid, pids: procPids });
+          resolve({ v7, connected: 'false', pid, pids: procPids });
         } else {
-          const v7 = {};
-          ['ExecuteBatch', 'ЗавершитьРаботуСистемы'].forEach(method => {
-            v7[method] = (...args) => new Promise((res, rej) => {
-              const id = nextId++;
-              pending.set(id, { res, rej });
-              child.send({ type: 'call', id, method, args });
-            });
-          });
-          // store child process and target 1C PIDs for later cleanup
-          v7._child = child;
-          v7._pids = procPids;
           // On successful connection, remove existing error.log if present
           try {
             if (fs.existsSync(errorLogPath)) fs.unlinkSync(errorLogPath);
