@@ -12,6 +12,7 @@ const [savePath, formPath, db, user, pass] = process.argv.slice(2);
     // srv.connected: "true" | "false" | "error"
     if (srv.connected === 'false') {
       console.error('❌ 1C connection failed.');
+      disconnect1C(srv.v7, srv.connected);
       return process.exit(1);
     }
     if (srv.connected === 'error') {

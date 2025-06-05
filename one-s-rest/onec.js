@@ -60,7 +60,7 @@ async function connect1C(userName, password, db_path) {
       try { fs.mkdirSync(dataDir, { recursive: true }); } catch {}
       try { fs.writeFileSync(errorLogPath, `1C initialize timed out at ${new Date().toISOString()}`); } catch {}
       resolve({ v7: null, connected: 'error', pid, pids: timeoutPIDs });
-    }, 60000);
+    }, 10000);
     const pending = new Map();
     let nextId = 1;
     let initialized = false;
