@@ -72,9 +72,9 @@ async function connect1C(userName, password, db_path) {
         if (!msg.connected) {
           // failed init: kill spawned 1C processes
           child.kill();
-          for (const tpid of procPids) kill1CProcess(tpid);
+          // for (const tpid of procPids) kill1CProcess(tpid);
           try { fs.mkdirSync(dataDir, { recursive: true }); } catch {}
-          try { fs.writeFileSync(errorLogPath, `1C initialize timed out at ${new Date().toISOString()}`); } catch {}
+          try { fs.writeFileSync(errorLogPath, `1C initialize failed connection at ${new Date().toISOString()}`); } catch {}
           resolve({ v7: null, connected: 'false', pid, pids: procPids });
         } else {
           const v7 = {};
