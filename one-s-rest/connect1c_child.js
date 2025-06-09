@@ -39,6 +39,9 @@ function get1CV7PIDs() {
   try {
     ok = v7.Initialize(v7.RMTrade, initParams, 'NO_SPLASH_SHOW');
   } catch (err) {
+    console.log('-------------------------')
+    console.log(err);
+    console.log('-------------------------')
     ok = false;
   }
   // Snapshot after
