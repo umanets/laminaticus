@@ -29,6 +29,9 @@ function get1CV7PIDs() {
   try {
     v7 = new COMObject('V77.Application');
   } catch (e) {
+    console.log("=================")
+    console.log(e);
+    console.log("=================")
     if (process.send) process.send({ type: 'init', connected: false, pids: [] });
     return;
   }
