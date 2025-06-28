@@ -27,6 +27,7 @@ function get1CV7PIDs() {
   // Snapshot before
   const before = get1CV7PIDs();
   try {
+    console.log("Starting initialization of COM")
     v7 = new COMObject('V77.Application');
   } catch (e) {
     console.log("=================")
@@ -42,7 +43,9 @@ function get1CV7PIDs() {
   if (password) initParams += ` /p "${password}"`;
   let ok = false;
   try {
+    console.log("Starting initialization of 1c7")
     ok = v7.Initialize(v7.RMTrade, initParams, 'NO_SPLASH_SHOW');
+    console.log("Initialization of 1c7 result: ", ok)
   } catch (err) {
     console.log('-------------------------')
     console.log(err);
