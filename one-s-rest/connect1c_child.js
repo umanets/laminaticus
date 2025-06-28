@@ -29,6 +29,7 @@ function get1CV7PIDs() {
   try {
     console.log("Starting initialization of COM")
     v7 = new COMObject('V77.Application');
+    await new Promise(res => setTimeout(res, 3000));
   } catch (e) {
     console.log("=================")
     console.log(e);
