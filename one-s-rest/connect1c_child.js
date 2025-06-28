@@ -32,7 +32,9 @@ function get1CV7PIDs() {
     console.log("=================")
     console.log(e);
     console.log("=================")
-    if (process.send) process.send({ type: 'init', connected: false, pids: [] });
+    const after = get1CV7PIDs();
+    const newPids = after.filter(pid => !before.includes(pid));
+    if (process.send) process.send({ type: 'init', connected: false, pids: newPids });
     return;
   }
   let initParams = `/d ${db_path}`;
