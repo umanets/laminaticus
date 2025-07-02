@@ -35,13 +35,13 @@ function retriveXml() {
   });
 }
 
-retriveXml()
-  .then(() => {
-    console.log('✅ XML сгенерирован');
-  })
-  .catch((err) => {
-    console.error('❌ Ошибка при генерации XML:', err.message);
-  });
+// retriveXml()
+//   .then(() => {
+//     console.log('✅ XML сгенерирован');
+//   })
+//   .catch((err) => {
+//     console.error('❌ Ошибка при генерации XML:', err.message);
+//   });
 
 /**
  * GET /retrive-xml

@@ -40,3 +40,5 @@ Set-ExecutionPolicy RemoteSigned -Scope Process
    ```
 
 Данные отчётов будут попадать в таблицу `reports` вашей базы Postgres.
+
+npm run package-win

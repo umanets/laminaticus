@@ -107,7 +107,7 @@ bot.use((ctx, next) => {
     const role = getRole(userId);
     if (role === 'authorized') {
       //ctx.reply('Регламентні роботи', getUIMgr(ctx).getMainMenuKeyboard(ctx));
-      return;
+      return next();
     }
     if (role === 'admin') {
       ctx.reply(
