@@ -11,3 +11,4 @@ logs
 # Ignore Postgres host storage except init scripts
 /db/*
 !/db/init/
+release-builds

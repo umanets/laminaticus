@@ -183,7 +183,9 @@ async function openReportForm(v7, savePath, formPath) {
     return;
   }
   try {
-    const cmd = `ОткрытьФорму("Отчет", "${savePath}", "${formPath}")`;
+    const absoluteSavePath = path.resolve(process.cwd(), '..', savePath);
+    console.log({absoluteSavePath})
+    const cmd = `ОткрытьФорму("Отчет", "${absoluteSavePath}", "${formPath}")`;
     console.log('📤 Выполняем ExecuteBatch');
     const ok = await v7.ExecuteBatch(cmd);
     console.log(ok ? '✅ Форма успешно открыта.' : '❌ Ошибка ExecuteBatch');

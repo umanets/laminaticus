@@ -1,0 +1,3 @@
+echo Starting Electron UI...
+REM Launch the Electron UI via npm
+start "" "%~dp0node32\\npm.cmd" start
