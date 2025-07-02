@@ -32,13 +32,13 @@ const services = [
     args: ['index.js'],
     shell: false
   },
-  {
-    name: 'SCHEDULER',
-    cwd: path.join(baseDir, 'one-s-rest'),
-    command: path.join(baseDir, 'node32', 'node.exe'),
-    args: ['scheduler.js'],
-    shell: false
-  }
+  // {
+  //   name: 'SCHEDULER',
+  //   cwd: path.join(baseDir, 'one-s-rest'),
+  //   command: path.join(baseDir, 'node32', 'node.exe'),
+  //   args: ['scheduler.js'],
+  //   shell: false
+  // }
 ];
 
 // Keep track of child processes
