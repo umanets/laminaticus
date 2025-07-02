@@ -106,7 +106,7 @@ bot.use((ctx, next) => {
   if (fs.existsSync(errorLogPath)) {
     const role = getRole(userId);
     if (role === 'authorized') {
-      ctx.reply('Регламентні роботи', getUIMgr(ctx).getMainMenuKeyboard(ctx));
+      //ctx.reply('Регламентні роботи', getUIMgr(ctx).getMainMenuKeyboard(ctx));
       return;
     }
     if (role === 'admin') {

@@ -11,9 +11,9 @@ const services = [
   {
     name: 'BOT',
     cwd: path.join(baseDir, 'demo-telegram-bot'),
-    command: 'npx ts-node bot.ts',
-    args: [],
-    shell: true
+    command: path.join(baseDir, 'node32', 'node.exe'),
+    args: ['-r', 'ts-node/register', 'bot.ts'],
+    shell: false
   },
   {
     name: 'API',
