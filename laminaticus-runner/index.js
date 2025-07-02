@@ -51,9 +51,11 @@ const labelWidth = maxNameLen + errorSuffix.length + 1;
 
 // Start each service
 services.forEach(({ name, cwd, command, args, shell, env }) => {
+  // Options for spawning the service; windowsHide prevents console windows from appearing
   const options = {
     cwd,
     shell,
+    windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: {
       ...process.env,
