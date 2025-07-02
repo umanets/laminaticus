@@ -16,12 +16,20 @@ window.addEventListener('DOMContentLoaded', () => {
     ipcRenderer.on('status-changed', (event, status) => {
         statusDisplay.textContent = status ? 'Running' : 'Stopped';
     });
-    // Append log messages to the log container
+
+    const MAX_LOGS = 30;
     const logContainer = document.getElementById('logContainer');
+
     ipcRenderer.on('log', (event, message) => {
         const line = document.createElement('div');
         line.textContent = message;
-        logContainer.appendChild(line);
-        logContainer.scrollTop = logContainer.scrollHeight;
+        
+        logContainer.prepend(line);
+
+        while (logContainer.childElementCount > MAX_LOGS) {
+            logContainer.removeChild(logContainer.lastElementChild);
+        }
+
+        logContainer.scrollTop = 0;
     });
 });
