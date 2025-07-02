@@ -69,31 +69,53 @@ function sendLog(message) {
 }
 
 /**
- * Launch the background runner and pipe its logs to the UI
+ * Launch docker-compose then the background runner, piping their logs to the UI
  */
 let runnerProcess;
 function startRunner() {
-  const runnerExe = path.join(__dirname, 'node32', 'node.exe');
-  const runnerScript = path.join(__dirname, 'laminaticus-runner', 'index.js');
-  runnerProcess = spawn(runnerExe, [runnerScript], {
-    cwd: path.dirname(runnerScript),
+  // Start docker-compose services in detached mode
+  sendLog('[DOCKER] running docker-compose up -d');
+  const composeProc = spawn('docker-compose', ['up', '-d'], {
+    cwd: __dirname,
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: process.env
   });
-  sendLog(`[RUNNER] started (pid ${runnerProcess.pid})`);
-  runnerProcess.stdout.on('data', (data) => {
+  composeProc.stdout.on('data', data => {
     data.toString().split(/\r?\n/).filter(line => line).forEach(line => {
-      sendLog(`[RUNNER] ${line}`);
+      sendLog(`[DOCKER] ${line}`);
     });
   });
-  runnerProcess.stderr.on('data', (data) => {
+  composeProc.stderr.on('data', data => {
     data.toString().split(/\r?\n/).filter(line => line).forEach(line => {
-      sendLog(`[RUNNER ERR] ${line}`);
+      sendLog(`[DOCKER] ${line}`);
     });
   });
-  runnerProcess.on('exit', (code, signal) => {
-    sendLog(`[RUNNER] exited with code ${code}${signal ? `, signal ${signal}` : ''}`);
+  composeProc.on('exit', (code, signal) => {
+    sendLog(`[DOCKER] exited with code ${code}${signal ? `, signal ${signal}` : ''}`);
+    if (code === 0) {
+      // Now start the Node runner
+      const runnerExe = path.join(__dirname, 'node32', 'node.exe');
+      const runnerScript = path.join(__dirname, 'laminaticus-runner', 'index.js');
+      runnerProcess = spawn(runnerExe, [runnerScript], {
+        cwd: path.dirname(runnerScript),
+        windowsHide: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: process.env
+      });
+      sendLog(`[RUNNER] started (pid ${runnerProcess.pid})`);
+      runnerProcess.stdout.on('data', data => {
+        data.toString().split(/\r?\n/).filter(line => line).forEach(line => sendLog(`[RUNNER] ${line}`));
+      });
+      runnerProcess.stderr.on('data', data => {
+        data.toString().split(/\r?\n/).filter(line => line).forEach(line => sendLog(`[RUNNER ERR] ${line}`));
+      });
+      runnerProcess.on('exit', (rc, signalR) => {
+        sendLog(`[RUNNER] exited with code ${rc}${signalR ? `, signal ${signalR}` : ''}`);
+      });
+    } else {
+      sendLog('[RUNNER] aborted: docker-compose failed');
+    }
   });
 }
 
