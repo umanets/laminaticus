@@ -23,7 +23,7 @@
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-200">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-lg border border-gray-200">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">XML Retrieval Scheduler</h1>
 
         <div class="flex flex-col space-y-4 mb-6">
@@ -40,6 +40,11 @@
         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <p class="text-lg font-medium text-gray-700 mb-2">Current Status:</p>
             <p id="statusDisplay" class="text-gray-600 text-sm">Loading status...</p>
+        </div>
+
+        <div class="bg-gray-900 text-white p-4 rounded-lg border border-gray-700 h-64 overflow-y-auto mt-6 font-mono text-xs">
+            <p class="font-medium mb-2">Logs:</p>
+            <div id="logContainer"></div>
         </div>
     </div>
 

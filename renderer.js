@@ -16,4 +16,12 @@ window.addEventListener('DOMContentLoaded', () => {
     ipcRenderer.on('status-changed', (event, status) => {
         statusDisplay.textContent = status ? 'Running' : 'Stopped';
     });
+    // Append log messages to the log container
+    const logContainer = document.getElementById('logContainer');
+    ipcRenderer.on('log', (event, message) => {
+        const line = document.createElement('div');
+        line.textContent = message;
+        logContainer.appendChild(line);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    });
 });

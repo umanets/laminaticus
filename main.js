@@ -17,20 +17,21 @@ let schedulerInterval = null;
 let isRunning = false;
 
 function retrieve() {
-  console.log(`[${new Date().toISOString()}] Triggering retrieve XML at ${retrieveUrl}`);
+  sendLog(`[${new Date().toISOString()}] Triggering retrieve XML at ${retrieveUrl}`);
   http.get(retrieveUrl, (res) => {
     const { statusCode } = res;
     let data = '';
     res.on('data', (chunk) => { data += chunk; });
     res.on('end', () => {
+      const timestamp = new Date().toISOString();
       if (statusCode === 200) {
-        console.log(`[${new Date().toISOString()}] retrieve XML success: ${data}`);
+        sendLog(`[${timestamp}] retrieve XML success: ${data}`);
       } else {
-        console.error(`[${new Date().toISOString()}] retrieve XML failed: ${statusCode} - ${data}`);
+        sendLog(`[${timestamp}] retrieve XML failed: ${statusCode} - ${data}`);
       }
     });
   }).on('error', (err) => {
-    console.error(`[${new Date().toISOString()}] HTTP request error: ${err.message}`);
+    sendLog(`[${new Date().toISOString()}] HTTP request error: ${err.message}`);
   });
 }
 
@@ -40,6 +41,7 @@ function startScheduler() {
   schedulerInterval = setInterval(retrieve, intervalMs);
   isRunning = true;
   sendStatus();
+  sendLog('[Scheduler] started');
 }
 
 function stopScheduler() {
@@ -48,6 +50,7 @@ function stopScheduler() {
   schedulerInterval = null;
   isRunning = false;
   sendStatus();
+  sendLog('[Scheduler] stopped');
 }
 
 let mainWindow;
@@ -57,25 +60,47 @@ function sendStatus() {
   }
 }
 
+// Send logs to both console and renderer UI
+function sendLog(message) {
+  console.log(message);
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('log', message);
+  }
+}
+
 /**
- * Launch the background runner as a detached, hidden process
+ * Launch the background runner and pipe its logs to the UI
  */
+let runnerProcess;
 function startRunner() {
   const runnerExe = path.join(__dirname, 'node32', 'node.exe');
   const runnerScript = path.join(__dirname, 'laminaticus-runner', 'index.js');
-  const child = spawn(runnerExe, [runnerScript], {
+  runnerProcess = spawn(runnerExe, [runnerScript], {
     cwd: path.dirname(runnerScript),
-    detached: true,
     windowsHide: true,
-    stdio: 'ignore'
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: process.env
   });
-  child.unref();
+  sendLog(`[RUNNER] started (pid ${runnerProcess.pid})`);
+  runnerProcess.stdout.on('data', (data) => {
+    data.toString().split(/\r?\n/).filter(line => line).forEach(line => {
+      sendLog(`[RUNNER] ${line}`);
+    });
+  });
+  runnerProcess.stderr.on('data', (data) => {
+    data.toString().split(/\r?\n/).filter(line => line).forEach(line => {
+      sendLog(`[RUNNER ERR] ${line}`);
+    });
+  });
+  runnerProcess.on('exit', (code, signal) => {
+    sendLog(`[RUNNER] exited with code ${code}${signal ? `, signal ${signal}` : ''}`);
+  });
 }
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 500,
-    height: 700,
+    width: 700,
+    height: 900,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
