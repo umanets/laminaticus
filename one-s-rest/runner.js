@@ -33,6 +33,7 @@ const [savePath, formPath, db, user, pass] = process.argv.slice(2);
     if (srv) {
       disconnect1C(srv.v7, srv.connected);
     }
+    await new Promise(res => setTimeout(res, 3000));
     process.exit(exitCode);
   }
 })();

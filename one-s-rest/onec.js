@@ -83,7 +83,7 @@ async function connect1C(userName, password, db_path) {
         v7._pids = procPids;
 
         if (!msg.connected) {
-          child.send({ type: 'shutdown' })
+          // try { v7._child.send({ type: 'shutdown' }); } catch {}
           try { fs.mkdirSync(dataDir, { recursive: true }); } catch {}
           try { fs.writeFileSync(errorLogPath, `1C initialize failed connection at ${new Date().toISOString()}`); } catch {}
           resolve({ v7, connected: 'false', pid, pids: procPids });
@@ -112,35 +112,6 @@ async function connect1C(userName, password, db_path) {
     });
   });
 }
-
-/**
- * Shutdown COM worker gracefully.
- */
-/**
- * Shutdown COM child process gracefully.
- */
-/**
- * Shutdown COM child process and kill any spawned 1C processes.
- */
-/**
- * Shutdown COM child process and, on error, kill spawned 1C processes.
- * @param {Object} v7 - COM proxy with _child and _pids
- * @param {'true'|'false'|'error'} connectedFlag
- */
-
-// async function disconnect1C(v7, connectedFlag) {
-//   if (!v7 || !v7._child) return;
-//   // Instruct child to clean up COM internally
-//   try { v7._child.send({ type: 'shutdown' }); } catch {}
-//   // Kill the child process
-//   try { v7._child.kill(); } catch {}
-//   // If timeout/error, kill any leftover 1CV7.exe processes
-//   if (connectedFlag === 'error' && Array.isArray(v7._pids)) {
-//     for (const pid of v7._pids) {
-//       kill1CProcess(pid);
-//     }
-//   }
-// }
 
 function disconnect1C(v7, connectedFlag) {
   if (v7) {
