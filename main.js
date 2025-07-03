@@ -130,11 +130,14 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 700,
     height: 900,
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     }
   });
+
+   Menu.setApplicationMenu(null);
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
