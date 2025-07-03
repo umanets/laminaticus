@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const { spawn } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const http = require('http');
@@ -88,8 +89,11 @@ function startRunner() {
   });
   composeProc.stderr.on('data', data => {
     data.toString().split(/\r?\n/).filter(line => line).forEach(line => {
-      sendLog(`[DOCKER] ${line}`);
+      sendLog(`[DOCKER ERR] ${line}`);
     });
+  });
+  composeProc.on('error', err => {
+    sendLog(`[DOCKER ERR] failed to launch docker-compose: ${err.message}`);
   });
   composeProc.on('exit', (code, signal) => {
     sendLog(`[DOCKER] exited with code ${code}${signal ? `, signal ${signal}` : ''}`);
@@ -109,6 +113,9 @@ function startRunner() {
       });
       runnerProcess.stderr.on('data', data => {
         data.toString().split(/\r?\n/).filter(line => line).forEach(line => sendLog(`[RUNNER ERR] ${line}`));
+      });
+      runnerProcess.on('error', err => {
+        sendLog(`[RUNNER ERR] failed to launch runner: ${err.message}`);
       });
       runnerProcess.on('exit', (rc, signalR) => {
         sendLog(`[RUNNER] exited with code ${rc}${signalR ? `, signal ${signalR}` : ''}`);
@@ -139,6 +146,35 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+// Prepare a persistent log file for diagnostics
+// Ensure data directory exists
+const dataDir = path.join(__dirname, 'data');
+try {
+  fs.mkdirSync(dataDir, { recursive: true });
+} catch (e) {
+  console.error('Failed to create data directory for logs:', e);
+}
+const logFilePath = path.join(dataDir, 'app.log');
+let logStream;
+try {
+  logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
+} catch (e) {
+  console.error('Failed to open log file for writing:', e);
+}
+
+// Override sendLog to also write to persistent log
+const origSendLog = sendLog;
+sendLog = (message) => {
+  const timestamp = new Date().toISOString();
+  const out = `[${timestamp}] ${message}`;
+  // Console and UI
+  origSendLog(out);
+  // File
+  if (logStream && !logStream.destroyed) {
+    logStream.write(out + '\n');
+  }
+};
 
 app.whenReady().then(() => {
   createWindow();
