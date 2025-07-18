@@ -34,11 +34,13 @@ Set-ExecutionPolicy RemoteSigned -Scope Process
    - PGPASSWORD=laminaticus_pass
    - PGDATABASE=laminaticus
 
-4. Запустите все сервисы:
-   ```powershell
-   .\run-services.bat
+5. Build electron:
+   ```
+   npm run package-win
    ```
 
-Данные отчётов будут попадать в таблицу `reports` вашей базы Postgres.
-
-npm run package-win
+6. run in manual mode:
+      ```
+      run-services.bat
+      node32/node.exe one-s-rest/scheduler.js
+      ```
