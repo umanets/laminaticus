@@ -167,6 +167,17 @@ bot.start((ctx) => {
   );
 });
 
+// Handle download of prices.pdf
+bot.hears('Прайси', async (ctx) => {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+  const filePath = path.resolve(__dirname, '../data/prices.pdf');
+  if (!fs.existsSync(filePath)) {
+    await ctx.reply('Файл прайсів не знайдено.', getUIMgr(ctx).getMainMenuKeyboard(ctx));
+    return;
+  }
+  await ctx.replyWithDocument({ source: fs.createReadStream(filePath), filename: 'prices.pdf' });
+});
 // --- Admin: list pending users
 bot.hears('Очікування користувачів', async (ctx) => {
   const userId = ctx.from?.id;

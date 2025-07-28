@@ -48,6 +48,50 @@ window.addEventListener('DOMContentLoaded', () => {
         console.error('Error watching data directory:', e);
     }
 
+    // Upload prices.pdf functionality with status label
+    try {
+        const uploadButton = document.getElementById('uploadButton');
+        if (uploadButton) {
+            const container = uploadButton.parentElement;
+            // Create status label
+            const statusLabel = document.createElement('p');
+            statusLabel.id = 'pricesStatusLabel';
+            statusLabel.style.fontSize = '0.9em';
+            statusLabel.style.marginTop = '0.5rem';
+            container.appendChild(statusLabel);
+            const dataDirPrices = path.join(__dirname, 'data');
+            const pricesPath = path.join(dataDirPrices, 'prices.pdf');
+            const updateStatusLabel = () => {
+                if (fs.existsSync(pricesPath)) {
+                    statusLabel.textContent = 'Прайси завантажено';
+                } else {
+                    statusLabel.textContent = 'Прайси не завантажено';
+                }
+            };
+            // Initial status
+            updateStatusLabel();
+            // Watch for updates
+            fs.watch(dataDirPrices, (eventType, filename) => {
+                if (filename === 'prices.pdf') {
+                    updateStatusLabel();
+                }
+            });
+            // Upload button click
+            uploadButton.addEventListener('click', async () => {
+                try {
+                    const result = await ipcRenderer.invoke('upload-prices-pdf');
+                    if (!result.success) {
+                        console.error('Upload cancelled or failed');
+                    }
+                } catch (err) {
+                    console.error('Error uploading prices.pdf:', err);
+                }
+            });
+        }
+    } catch (err) {
+        console.error('Error setting up upload button and status label:', err);
+    }
+
     const MAX_LOGS = 30;
     const logContainer = document.getElementById('logContainer');
 

@@ -15,6 +15,7 @@ export class UserUI implements UIManager {
         return Markup.keyboard([
           ['Мої резерви'],
           ['Залишки та резервування'],
+          ['Прайси'],
         ]).resize();
       }
       case 'chooseCatalog': {

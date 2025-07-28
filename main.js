@@ -185,6 +185,29 @@ app.whenReady().then(() => {
 });
 ipcMain.on('start-scheduler', startScheduler);
 ipcMain.on('stop-scheduler', stopScheduler);
+// Handle upload of prices.pdf into data folder
+ipcMain.handle('upload-prices-pdf', async (event) => {
+  try {
+    const { dialog } = require('electron');
+    const options = {
+      title: 'Виберіть PDF для завантаження прайсів',
+      properties: ['openFile'],
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    };
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, options);
+    if (!canceled && filePaths && filePaths.length > 0) {
+      const selectedPath = filePaths[0];
+      const destPath = path.join(__dirname, 'data', 'prices.pdf');
+      fs.copyFileSync(selectedPath, destPath);
+      return { success: true };
+    } else {
+      return { success: false };
+    }
+  } catch (err) {
+    console.error('Error in upload-prices-pdf handler:', err);
+    return { success: false, error: err.message };
+  }
+});
 app.on('window-all-closed', () => {
   if (isRunning) stopScheduler();
   if (process.platform !== 'darwin') app.quit();
