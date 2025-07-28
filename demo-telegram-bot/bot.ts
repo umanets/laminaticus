@@ -11,6 +11,7 @@ import { DataService } from './services/dataService';
 import { UserStateService } from './services/userStateService';
 import { UserService } from './services/userService';
 import { ReservationService } from './services/reservationService';
+import nodemailer from 'nodemailer';
 
 // Load environment variables from parent .env (project root)
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -493,7 +494,7 @@ bot.on('text', async (ctx) => {
       if (brands.includes(text)) {
         UserStateService.setBrand(userId, text);
         UserStateService.setState(userId, 'chooseAction');
-        ctx.reply(`Бренд "${text}" обрано. Виберіть дію. Будь ласка, напишіть назву або код товару для перевірки залишку. Або виберіть дію.`, uiMgr.getMainMenuKeyboard(ctx));
+        ctx.reply(`Бренд "${text}" обрано. Будь ласка, напишіть назву або код товару для перевірки залишку. Або виберіть дію.`, uiMgr.getMainMenuKeyboard(ctx));
       } else {
         ctx.reply('Будь ласка, виберіть бренд зі списку.', uiMgr.getMainMenuKeyboard(ctx));
       }
@@ -564,6 +565,41 @@ bot.on('text', async (ctx) => {
       // Persist reservation to file
       const mapKey2 = mapKey; // reuse key for persistence
       ReservationService.addReservation(userId, mapKey2, selCode, qty, selectedItem.unit);
+      // Send notification email to admin
+      const adminEmail = process.env.NOTIFICATION_EMAIL;
+      if (adminEmail) {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: Number(process.env.EMAIL_PORT) || 587,
+            secure: process.env.EMAIL_SECURE === 'true',
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS,
+            },
+          });
+          const urec = UserService.getUser(userId);
+          const displayName = urec ? urec.displayName : `${userId}`;
+          console.log({
+            host: process.env.EMAIL_HOST,
+            port: Number(process.env.EMAIL_PORT) || 587,
+            secure: process.env.EMAIL_SECURE === 'true',
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS,
+            },
+          })
+          await transporter.sendMail({
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER || adminEmail,
+            to: adminEmail,
+            subject: `Новый резерв от ${displayName}`,
+            text: `Пользователь ${displayName} зарезервировал товар "${itemName}" в количестве ${qty} ${selectedItem.unit}.`,
+          });
+          console.log(`Notification email sent to ${adminEmail}`);
+        } catch (err) {
+          console.error('Error sending notification email:', err);
+        }
+      }
       // Confirm reservation and return to actions menu
       UserStateService.setState(userId, 'chooseAction');
       ctx.reply(

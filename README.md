@@ -10,6 +10,9 @@ Set-ExecutionPolicy RemoteSigned -Scope Process
 .\install.ps1
 ```
 
+* email reserving notification
+  https://app.mailjet.com/account/sender?type=auth
+  https://dash.cloudflare.com/84a88304df0a19839889fa419ef30d3c/laminaticus.trade/dns/records
   
 ## PostgreSQL Backend for Report Watcher
 
