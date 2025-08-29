@@ -281,7 +281,7 @@ bot.action(/select_(.+)/, async (ctx) => {
   const available = item.remains - reservedSum;
   // Present reservation button and back button
   const buttons = Markup.inlineKeyboard([
-    [Markup.button.callback('📝 Резервування', `reserve_${code}`)],
+    // [Markup.button.callback('📝 Резервування', `reserve_${code}`)],
     [Markup.button.callback('⬅️ Назад', 'back_to_action')]
   ]);
   await ctx.editMessageText(
@@ -370,7 +370,7 @@ async function stockSearch(text:string, state: any, ctx: any, userId: any, uiMgr
         [Markup.button.callback('⬅️ Назад', 'back_to_action')]
       ];
       
-      ctx.reply('Знайдені товари (Клацнiть для резервування):', Markup.inlineKeyboard(buttons));
+      ctx.reply('Знайдені товари:', Markup.inlineKeyboard(buttons));
     } else {
       // Nothing found -> return to action menu
       UserStateService.setState(userId, 'chooseAction');
@@ -449,25 +449,25 @@ bot.on('text', async (ctx) => {
   if (getRole(userId) === 'authorized' || getRole(userId) === 'admin') {
     const stateInitial = UserStateService.getState(userId);
     if (stateInitial.state === 'initial') {
-      if (text === 'Мої резерви') {
-        const all = ReservationService.getAll();
-        const mine = all.filter(r => r.userId === userId && r.status === 'ongoing');
-        if (mine.length === 0) {
-          await ctx.reply('Немає резервів на очікуванні.');
-        } else {
-          const lines: string[] = [];
-          for (const r of mine) {
-            const items = await DataService.getItems(r.key);
-            const item = items.find(i => i.code === r.code);
-            const name = item ? item.name : r.code;
-            lines.push(`${name} — ${r.reserv_qty} ${r.unit}`);
-          }
-          await ctx.reply(lines.join('\n'));
-        }
-        getUIMgr(ctx).getMainMenuKeyboard(ctx);
-        return;
-      }
-      if (text === 'Залишки та резервування') {
+      // if (text === 'Мої резерви') {
+      //   const all = ReservationService.getAll();
+      //   const mine = all.filter(r => r.userId === userId && r.status === 'ongoing');
+      //   if (mine.length === 0) {
+      //     await ctx.reply('Немає резервів на очікуванні.');
+      //   } else {
+      //     const lines: string[] = [];
+      //     for (const r of mine) {
+      //       const items = await DataService.getItems(r.key);
+      //       const item = items.find(i => i.code === r.code);
+      //       const name = item ? item.name : r.code;
+      //       lines.push(`${name} — ${r.reserv_qty} ${r.unit}`);
+      //     }
+      //     await ctx.reply(lines.join('\n'));
+      //   }
+      //   getUIMgr(ctx).getMainMenuKeyboard(ctx);
+      //   return;
+      // }
+      if (text === 'Залишки') {
         UserStateService.setState(userId, 'chooseCatalog');
         ctx.reply('Будь ласка, виберіть каталог.', getUIMgr(ctx).getMainMenuKeyboard(ctx));
         return;

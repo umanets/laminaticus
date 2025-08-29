@@ -13,8 +13,8 @@ export class UserUI implements UIManager {
     switch (state.state) {
       case 'initial': {
         return Markup.keyboard([
-          ['Мої резерви'],
-          ['Залишки та резервування'],
+          // ['Мої резерви'],
+          ['Залишки'],
           ['Прайси'],
         ]).resize();
       }

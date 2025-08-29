@@ -13,8 +13,8 @@ export class AdminUI implements UIManager {
         switch (state.state) {
           case 'initial': {
             return Markup.keyboard([
-              ['Очікування користувачів', 'Резерви'],
-              ['Залишки та резервування'],
+              ['Очікування користувачів'],
+              ['Залишки'],
             ]).resize();
           }
           case 'chooseCatalog': {
