@@ -126,19 +126,23 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Auto-update UI
     if (updateButton && updateStatus) {
+        // Keep button hidden until download completed
         updateButton.classList.add('hidden');
         ipcRenderer.on('update-available', (event, info) => {
             updateStatus.textContent = `Доступне оновлення ${info.version}`;
-            updateButton.classList.remove('hidden');
+            // Button stays hidden at this stage
         });
         ipcRenderer.on('update-progress', (event, p) => {
             const pct = Math.floor(p.percent || 0);
             updateStatus.textContent = `Завантаження оновлення: ${pct}%`;
+            // Button stays hidden during download
         });
         ipcRenderer.on('update-downloaded', () => {
-            updateStatus.textContent = 'Оновлення завантажено. Додаток перезапуститься.';
+            updateStatus.textContent = 'Оновлення завантажено. Готове до встановлення.';
+            updateButton.classList.remove('hidden');
         });
         updateButton.addEventListener('click', () => {
+            updateButton.disabled = true;
             updateStatus.textContent = 'Встановлення оновлення...';
             ipcRenderer.send('start-update');
         });
