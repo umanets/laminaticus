@@ -59,6 +59,7 @@ export class MappingService {
       return;
     }
     const dir = path.dirname(MappingService.filePath);
+    try { fs.mkdirSync(dir, { recursive: true }); } catch {}
     try {
       MappingService.watcher = fs.watch(dir, (eventType, filename) => {
         if (!filename || filename !== path.basename(MappingService.filePath)) {

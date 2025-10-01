@@ -20,7 +20,14 @@ export interface ReservationRecord {
  * Service to manage persistent reservations in a JSON file.
  */
 export class ReservationService {
-  private static filePath = path.resolve(__dirname, '../../data/reservations.json');
+  private static resolveDataDir(): string {
+    const userDataEnv = process.env.USER_DATA_DIR;
+    if (userDataEnv && userDataEnv.trim().length > 0) {
+      return path.join(userDataEnv, 'data');
+    }
+    return path.resolve(__dirname, '../../data');
+  }
+  private static filePath = path.join(ReservationService.resolveDataDir(), 'reservations.json');
   private static cache: ReservationRecord[] | null = null;
 
   /**
@@ -47,6 +54,7 @@ export class ReservationService {
   private static save(): void {
     if (this.cache === null) return;
     try {
+      try { fs.mkdirSync(path.dirname(this.filePath), { recursive: true }); } catch {}
       fs.writeFileSync(
         this.filePath,
         JSON.stringify(this.cache, null, 2),

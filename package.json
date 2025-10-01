@@ -37,7 +37,6 @@
       { "from": "one-s-rest", "to": "one-s-rest" },
       { "from": "prebuild", "to": "prebuild" },
       { "from": "db", "to": "db" },
-      { "from": "data", "to": "data" },
       { "from": "docker-compose.yml", "to": "docker-compose.yml" },
       { "from": "run-services.bat", "to": "run-services.bat" },
       { "from": "runui.bat", "to": "runui.bat" }

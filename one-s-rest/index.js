@@ -10,7 +10,10 @@ function retriveXml() {
   return new Promise((resolve, reject) => {
     const nodePath = path.resolve(__dirname, '../node32/node');
     const runnerPath = path.resolve(__dirname, 'runner.js');
-    const savePath = process.env.REPORT_SAVE_PATH;
+    // Prefer USER_DATA_DIR (AppData) for saving report.xml; fallback to env-configured relative path
+    const savePath = process.env.USER_DATA_DIR
+      ? path.join(process.env.USER_DATA_DIR, 'data', 'report.xml')
+      : process.env.REPORT_SAVE_PATH;
     const formPath = process.env.REPORT_MODULE_PATH;
     
     const db = process.env.REPORT_DB_CONFIGURATION;

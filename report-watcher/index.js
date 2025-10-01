@@ -15,7 +15,8 @@ const pool = new Pool({
   database: process.env.PGDATABASE || 'laminaticus',
 });
 
-const dataDir = path.resolve(__dirname, '../data');
+const userDataBase = process.env.USER_DATA_DIR ? path.resolve(process.env.USER_DATA_DIR) : path.resolve(__dirname, '..');
+const dataDir = path.join(userDataBase, 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
   console.log(`✅ Created data directory: ${dataDir}`);

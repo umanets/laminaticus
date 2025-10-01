@@ -20,7 +20,14 @@ export interface UserRecord {
  * Service to manage persistent user records in users.json
  */
 export class UserService {
-  private static filePath = path.resolve(__dirname, '../../data/users.json');
+  private static resolveDataDir(): string {
+    const userDataEnv = process.env.USER_DATA_DIR;
+    if (userDataEnv && userDataEnv.trim().length > 0) {
+      return path.join(userDataEnv, 'data');
+    }
+    return path.resolve(__dirname, '../../data');
+  }
+  private static filePath = path.join(UserService.resolveDataDir(), 'users.json');
   private static cache: UserRecord[] = [];
   private static watcher?: fs.FSWatcher;
   private static reloadTimer?: NodeJS.Timeout;
@@ -30,6 +37,7 @@ export class UserService {
       return;
     }
     const dir = path.dirname(UserService.filePath);
+    try { fs.mkdirSync(dir, { recursive: true }); } catch {}
     try {
       UserService.watcher = fs.watch(dir, (eventType, filename) => {
         if (!filename || filename !== path.basename(UserService.filePath)) {
@@ -78,6 +86,7 @@ export class UserService {
   private static save(): void {
     if (this.cache === null) return;
     try {
+      try { fs.mkdirSync(path.dirname(this.filePath), { recursive: true }); } catch {}
       fs.writeFileSync(
         this.filePath,
         JSON.stringify(this.cache, null, 2),
