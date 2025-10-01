@@ -8,6 +8,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const statusDisplay = document.getElementById('statusDisplay');
     const updateButton = document.getElementById('updateButton');
     const updateStatus = document.getElementById('updateStatus');
+    const openDataParentButton = document.getElementById('openDataParentButton');
 
     let paths = { dataDir: path.join(__dirname, 'data') };
     try {
@@ -112,6 +113,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         logContainer.scrollTop = 0;
     });
+
+    // Open data parent folder
+    if (openDataParentButton) {
+        openDataParentButton.addEventListener('click', () => {
+            ipcRenderer.send('open-data-parent');
+        });
+    }
 
     // Auto-update UI
     if (updateButton && updateStatus) {

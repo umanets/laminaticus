@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -238,6 +238,14 @@ app.whenReady().then(() => {
       autoUpdater.quitAndInstall();
     } catch (e) {
       sendLog(`[UPDATE] install failed: ${e.message}`);
+    }
+  });
+  // Open parent folder of data directory
+  ipcMain.on('open-data-parent', async () => {
+    try {
+      await shell.openPath(userDataDir);
+    } catch (e) {
+      sendLog(`[OPEN] failed to open data parent: ${e.message}`);
     }
   });
 
