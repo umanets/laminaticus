@@ -5,7 +5,7 @@
     - Пути для runner и docker-compose.yml берутся из process.resourcesPath в проде.
     - IPC get-paths для передачи пути dataDir в renderer.
 - renderer.js
-    - Запрашивает у main путь dataDir и использует его для error.log и prices.pdf.
+    - Запрашивает у main путь dataDir и использует его для error.log и папки data/prices.
     - Обновляет UI при событиях апдейта и дергает start-update по кнопке.
 - index.html
     - Добавлены элементы: кнопка “Оновити додаток” и статус обновления.

@@ -55,7 +55,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.error('Error watching data directory:', e);
     }
 
-    // Upload prices.pdf functionality with status label
+    // Upload multiple price files functionality with status label
     try {
         const uploadButton = document.getElementById('uploadButton');
         if (uploadButton) {
@@ -66,31 +66,34 @@ window.addEventListener('DOMContentLoaded', async () => {
             statusLabel.style.fontSize = '0.9em';
             statusLabel.style.marginTop = '0.5rem';
             container.appendChild(statusLabel);
-            const pricesPath = path.join(paths.dataDir, 'prices.pdf');
+            const pricesDir = path.join(paths.dataDir, 'prices');
+            try { fs.mkdirSync(pricesDir, { recursive: true }); } catch {}
+            const allowed = new Set(['.pdf', '.doc', '.docx', '.csv', '.xml', '.xls', '.xlsx']);
             const updateStatusLabel = () => {
-                if (fs.existsSync(pricesPath)) {
-                    statusLabel.textContent = 'Прайси завантажено';
-                } else {
-                    statusLabel.textContent = 'Прайси не завантажено';
-                }
+                try {
+                    if (!fs.existsSync(pricesDir)) {
+                        statusLabel.textContent = 'Прайси не завантажено';
+                        return;
+                    }
+                    const files = fs.readdirSync(pricesDir).filter(f => allowed.has(path.extname(f).toLowerCase()));
+                    statusLabel.textContent = files.length > 0 ? `Прайси завантажено (${files.length} файл(и))` : 'Прайси не завантажено';
+                } catch { statusLabel.textContent = 'Прайси не завантажено'; }
             };
             // Initial status
             updateStatusLabel();
             // Watch for updates
-            fs.watch(paths.dataDir, (eventType, filename) => {
-                if (filename === 'prices.pdf') {
-                    updateStatusLabel();
-                }
-            });
+            try {
+                fs.watch(pricesDir, () => { updateStatusLabel(); });
+            } catch {}
             // Upload button click
             uploadButton.addEventListener('click', async () => {
                 try {
-                    const result = await ipcRenderer.invoke('upload-prices-pdf');
+                    const result = await ipcRenderer.invoke('upload-prices-files');
                     if (!result.success) {
                         console.error('Upload cancelled or failed');
                     }
                 } catch (err) {
-                    console.error('Error uploading prices.pdf:', err);
+                    console.error('Error uploading prices:', err);
                 }
             });
         }

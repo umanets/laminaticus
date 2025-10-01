@@ -167,16 +167,36 @@ bot.start((ctx) => {
   );
 });
 
-// Handle download of prices.pdf
+// Handle sending all available price files
 bot.hears('Прайси', async (ctx) => {
   const userId = ctx.from?.id;
   if (!userId) return;
-  const filePath = path.resolve(__dirname, '../data/prices.pdf');
-  if (!fs.existsSync(filePath)) {
-    await ctx.reply('Файл прайсів не знайдено.', getUIMgr(ctx).getMainMenuKeyboard(ctx));
-    return;
+  const userDataBase = process.env.USER_DATA_DIR ? path.resolve(process.env.USER_DATA_DIR) : path.resolve(__dirname, '..');
+  const pricesDir = path.join(userDataBase, 'data', 'prices');
+  const allowed = new Set(['.pdf', '.doc', '.docx', '.csv', '.xml', '.xls', '.xlsx']);
+  try {
+    if (!fs.existsSync(pricesDir)) {
+      await ctx.reply('Файли прайсів не знайдено.', getUIMgr(ctx).getMainMenuKeyboard(ctx));
+      return;
+    }
+    const files = fs.readdirSync(pricesDir)
+      .filter(f => allowed.has(path.extname(f).toLowerCase()))
+      .sort((a, b) => a.localeCompare(b, 'uk'));
+    if (files.length === 0) {
+      await ctx.reply('Файли прайсів не знайдено.', getUIMgr(ctx).getMainMenuKeyboard(ctx));
+      return;
+    }
+    for (const f of files) {
+      const full = path.join(pricesDir, f);
+      try {
+        await ctx.replyWithDocument({ source: fs.createReadStream(full), filename: f });
+      } catch (e) {
+        await ctx.reply(`Не вдалося надіслати файл: ${f}`);
+      }
+    }
+  } catch (e) {
+    await ctx.reply('Сталася помилка при отриманні прайсів.', getUIMgr(ctx).getMainMenuKeyboard(ctx));
   }
-  await ctx.replyWithDocument({ source: fs.createReadStream(filePath), filename: 'prices.pdf' });
 });
 // --- Admin: list pending users
 bot.hears('Очікування користувачів', async (ctx) => {

@@ -254,26 +254,47 @@ app.whenReady().then(() => {
 });
 ipcMain.on('start-scheduler', startScheduler);
 ipcMain.on('stop-scheduler', stopScheduler);
-// Handle upload of prices.pdf into data folder
-ipcMain.handle('upload-prices-pdf', async (event) => {
+// Handle upload of multiple price files into data/prices folder
+ipcMain.handle('upload-prices-files', async (event) => {
   try {
     const { dialog } = require('electron');
     const options = {
-      title: 'Виберіть PDF для завантаження прайсів',
-      properties: ['openFile'],
-      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      title: 'Виберіть файли прайсів',
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'Документи', extensions: ['pdf', 'doc', 'docx'] },
+        { name: 'Таблиці', extensions: ['csv', 'xml', 'xls', 'xlsx'] },
+        { name: 'Усі підтримувані', extensions: ['pdf','doc','docx','csv','xml','xls','xlsx'] },
+      ]
     };
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, options);
     if (!canceled && filePaths && filePaths.length > 0) {
-      const selectedPath = filePaths[0];
-      const destPath = path.join(dataDir, 'prices.pdf');
-      fs.copyFileSync(selectedPath, destPath);
-      return { success: true };
+      // Ensure prices directory exists
+      const pricesDir = path.join(dataDir, 'prices');
+      try { fs.mkdirSync(pricesDir, { recursive: true }); } catch {}
+      // Clean up existing files in pricesDir
+      try {
+        for (const entry of fs.readdirSync(pricesDir)) {
+          const p = path.join(pricesDir, entry);
+          try { if (fs.statSync(p).isFile()) fs.unlinkSync(p); } catch {}
+        }
+      } catch {}
+      // Allowed extensions (validate defensively)
+      const allowed = new Set(['.pdf', '.doc', '.docx', '.csv', '.xml', '.xls', '.xlsx']);
+      let copied = 0;
+      for (const sel of filePaths) {
+        const ext = path.extname(sel).toLowerCase();
+        if (!allowed.has(ext)) continue;
+        const base = path.basename(sel);
+        const dest = path.join(pricesDir, base);
+        try { fs.copyFileSync(sel, dest); copied++; } catch (e) { sendLog(`[UPLOAD] copy failed for ${base}: ${e.message}`); }
+      }
+      return { success: copied > 0, copied };
     } else {
       return { success: false };
     }
   } catch (err) {
-    console.error('Error in upload-prices-pdf handler:', err);
+    console.error('Error in upload-prices-files handler:', err);
     return { success: false, error: err.message };
   }
 });
