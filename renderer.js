@@ -2,10 +2,17 @@ const { ipcRenderer } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     const startButton = document.getElementById('startButton');
     const stopButton = document.getElementById('stopButton');
     const statusDisplay = document.getElementById('statusDisplay');
+    const updateButton = document.getElementById('updateButton');
+    const updateStatus = document.getElementById('updateStatus');
+
+    let paths = { dataDir: path.join(__dirname, 'data') };
+    try {
+        paths = await ipcRenderer.invoke('get-paths');
+    } catch {}
 
     startButton.addEventListener('click', () => {
         ipcRenderer.send('start-scheduler');
@@ -22,8 +29,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Show and dynamically update warning if data/error.log exists
     const warningDiv = document.getElementById('warningDiv');
     try {
-        const dataDir = path.join(__dirname, 'data');
-        const errorLogPath = path.join(dataDir, 'error.log');
+        const errorLogPath = path.join(paths.dataDir, 'error.log');
         // Function to update warning visibility
         const updateWarning = () => {
             try {
@@ -39,7 +45,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // Initial check
         updateWarning();
         // Watch data directory for runtime changes
-        fs.watch(dataDir, (eventType, filename) => {
+        fs.watch(paths.dataDir, (eventType, filename) => {
             if (filename === 'error.log') {
                 updateWarning();
             }
@@ -59,8 +65,7 @@ window.addEventListener('DOMContentLoaded', () => {
             statusLabel.style.fontSize = '0.9em';
             statusLabel.style.marginTop = '0.5rem';
             container.appendChild(statusLabel);
-            const dataDirPrices = path.join(__dirname, 'data');
-            const pricesPath = path.join(dataDirPrices, 'prices.pdf');
+            const pricesPath = path.join(paths.dataDir, 'prices.pdf');
             const updateStatusLabel = () => {
                 if (fs.existsSync(pricesPath)) {
                     statusLabel.textContent = 'Прайси завантажено';
@@ -71,7 +76,7 @@ window.addEventListener('DOMContentLoaded', () => {
             // Initial status
             updateStatusLabel();
             // Watch for updates
-            fs.watch(dataDirPrices, (eventType, filename) => {
+            fs.watch(paths.dataDir, (eventType, filename) => {
                 if (filename === 'prices.pdf') {
                     updateStatusLabel();
                 }
@@ -107,4 +112,24 @@ window.addEventListener('DOMContentLoaded', () => {
 
         logContainer.scrollTop = 0;
     });
+
+    // Auto-update UI
+    if (updateButton && updateStatus) {
+        updateButton.classList.add('hidden');
+        ipcRenderer.on('update-available', (event, info) => {
+            updateStatus.textContent = `Доступне оновлення ${info.version}`;
+            updateButton.classList.remove('hidden');
+        });
+        ipcRenderer.on('update-progress', (event, p) => {
+            const pct = Math.floor(p.percent || 0);
+            updateStatus.textContent = `Завантаження оновлення: ${pct}%`;
+        });
+        ipcRenderer.on('update-downloaded', () => {
+            updateStatus.textContent = 'Оновлення завантажено. Додаток перезапуститься.';
+        });
+        updateButton.addEventListener('click', () => {
+            updateStatus.textContent = 'Встановлення оновлення...';
+            ipcRenderer.send('start-update');
+        });
+    }
 });

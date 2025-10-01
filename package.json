@@ -1,16 +1,62 @@
 {
-  "name": "xml-retrieval-scheduler-electron",
+  "name": "laminaticus",
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "package-win": "electron-packager . \"XMLScheduler\" --platform=win32 --arch=x64 --out=release-builds --overwrite"
+    "package-win": "electron-packager . \"Laminaticus\" --platform=win32 --arch=x64 --out=release-builds --overwrite",
+    "dist": "electron-builder",
+    "publish": "electron-builder --publish always"
   },
   "dependencies": {
-    "dotenv": "^16.0.0"
+    "dotenv": "^16.0.0",
+    "electron-updater": "^6.1.8"
   },
   "devDependencies": {
     "electron": "^25.2.0",
-    "electron-packager": "^17.1.2"
+    "electron-packager": "^17.1.2",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.laminaticus.scheduler",
+    "productName": "Laminaticus",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "renderer.js",
+      "index.html",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "node32", "to": "node32" },
+      { "from": "laminaticus-runner", "to": "laminaticus-runner" },
+      { "from": "demo-telegram-bot", "to": "demo-telegram-bot" },
+      { "from": "report-watcher", "to": "report-watcher" },
+      { "from": "one-s-rest", "to": "one-s-rest" },
+      { "from": "prebuild", "to": "prebuild" },
+      { "from": "db", "to": "db" },
+      { "from": "data", "to": "data" },
+      { "from": "docker-compose.yml", "to": "docker-compose.yml" },
+      { "from": "run-services.bat", "to": "run-services.bat" },
+      { "from": "runui.bat", "to": "runui.bat" }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "umanets",
+        "repo": "laminaticus",
+        "releaseType": "release" 
+      }
+    ]
   }
 }

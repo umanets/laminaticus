@@ -7,8 +7,17 @@ interface MappingEntry {
 }
 
 export class MappingService {
+  // Resolve data directory: prefer USER_DATA_DIR from Electron main, fallback to packaged relative path
+  private static resolveDataDir(): string {
+    const userDataEnv = process.env.USER_DATA_DIR;
+    if (userDataEnv && userDataEnv.trim().length > 0) {
+      return path.join(userDataEnv, 'data');
+    }
+    // Fallback to resources/data when running without Electron context (dev)
+    return path.resolve(__dirname, '../../data');
+  }
   // Path to the mappings JSON file
-  private static filePath: string = path.resolve(__dirname, '../../data/mappings.json');
+  private static filePath: string = path.join(MappingService.resolveDataDir(), 'mappings.json');
   // In-memory cache of mappings
   private static mappings: Record<string, MappingEntry> = {};
   // File system watcher for runtime updates

@@ -1,18 +1,56 @@
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const http = require('http');
+const dotenv = require('dotenv');
 
-const intervalMin = parseInt(process.env.RETRIEVE_INTERVAL_MINUTES, 10);
-if (isNaN(intervalMin) || intervalMin <= 0) {
-  console.error('Error: RETRIEVE_INTERVAL_MINUTES not set or invalid in .env');
-  app.quit();
+let intervalMs = 5 * 60 * 1000; // default fallback 5 min
+let retrieveUrl = 'http://localhost:3001/retrieve-xml';
+let userDataDir = null;
+let dataDir = null;
+let resourcesBase = null;
+
+function ensureDir(p) {
+  try { fs.mkdirSync(p, { recursive: true }); } catch {}
 }
 
-const intervalMs = intervalMin * 60 * 1000;
-const retrieveUrl = process.env.RETRIEVE_URL || 'http://localhost:3001/retrieve-xml';
+function copyIfMissing(src, dst) {
+  try {
+    if (!fs.existsSync(dst) && fs.existsSync(src)) {
+      if (fs.statSync(src).isDirectory()) {
+        ensureDir(dst);
+        for (const entry of fs.readdirSync(src)) {
+          const s = path.join(src, entry);
+          const d = path.join(dst, entry);
+          if (fs.statSync(s).isDirectory()) copyIfMissing(s, d); else fs.copyFileSync(s, d);
+        }
+      } else {
+        ensureDir(path.dirname(dst));
+        fs.copyFileSync(src, dst);
+      }
+    }
+  } catch (e) {
+    console.error('Error during copyIfMissing', src, '->', dst, e);
+  }
+}
+
+function loadEnvAndConfig() {
+  const legacyEnvPath = path.resolve(resourcesBase, '.env');
+  const targetEnvPath = path.join(userDataDir, '.env');
+  // Migrate .env and data dir from app folder to userData if needed
+  copyIfMissing(legacyEnvPath, targetEnvPath);
+  const legacyDataDir = path.join(resourcesBase, 'data');
+  copyIfMissing(legacyDataDir, dataDir);
+
+  dotenv.config({ path: targetEnvPath });
+  const intervalMin = parseInt(process.env.RETRIEVE_INTERVAL_MINUTES, 10);
+  if (!isNaN(intervalMin) && intervalMin > 0) {
+    intervalMs = intervalMin * 60 * 1000;
+  }
+  retrieveUrl = process.env.RETRIEVE_URL || retrieveUrl;
+}
 
 let schedulerInterval = null;
 let isRunning = false;
@@ -77,7 +115,7 @@ function startRunner() {
   // Start docker-compose services in detached mode
   sendLog('[DOCKER] running docker-compose up -d');
   const composeProc = spawn('docker-compose', ['up', '-d'], {
-    cwd: __dirname,
+    cwd: resourcesBase,
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: process.env
@@ -99,13 +137,13 @@ function startRunner() {
     sendLog(`[DOCKER] exited with code ${code}${signal ? `, signal ${signal}` : ''}`);
     if (code === 0) {
       // Now start the Node runner
-      const runnerExe = path.join(__dirname, 'node32', 'node.exe');
-      const runnerScript = path.join(__dirname, 'laminaticus-runner', 'index.js');
+      const runnerExe = path.join(resourcesBase, 'node32', 'node.exe');
+      const runnerScript = path.join(resourcesBase, 'laminaticus-runner', 'index.js');
       runnerProcess = spawn(runnerExe, [runnerScript], {
         cwd: path.dirname(runnerScript),
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe'],
-        env: process.env
+        env: { ...process.env, USER_DATA_DIR: userDataDir }
       });
       sendLog(`[RUNNER] started (pid ${runnerProcess.pid})`);
       runnerProcess.stdout.on('data', data => {
@@ -150,36 +188,59 @@ function createWindow() {
   });
 }
 
-// Prepare a persistent log file for diagnostics
-// Ensure data directory exists
-const dataDir = path.join(__dirname, 'data');
-try {
-  fs.mkdirSync(dataDir, { recursive: true });
-} catch (e) {
-  console.error('Failed to create data directory for logs:', e);
-}
-const logFilePath = path.join(dataDir, 'app.log');
 let logStream;
-try {
-  logStream = fs.createWriteStream(logFilePath, { flags: 'a' });
-} catch (e) {
-  console.error('Failed to open log file for writing:', e);
-}
-
-// Override sendLog to also write to persistent log
-const origSendLog = sendLog;
-sendLog = (message) => {
-  const timestamp = new Date().toISOString();
-  const out = `[${timestamp}] ${message}`;
-  // Console and UI
-  origSendLog(out);
-  // File
-  if (logStream && !logStream.destroyed) {
-    logStream.write(out + '\n');
-  }
-};
+let origSendLog;
 
 app.whenReady().then(() => {
+  resourcesBase = app.isPackaged ? process.resourcesPath : __dirname;
+  userDataDir = app.getPath('userData');
+  dataDir = path.join(userDataDir, 'data');
+  ensureDir(dataDir);
+
+  // Persistent log setup
+  const logFilePath = path.join(dataDir, 'app.log');
+  try { logStream = fs.createWriteStream(logFilePath, { flags: 'a' }); } catch {}
+  origSendLog = sendLog;
+  sendLog = (message) => {
+    const timestamp = new Date().toISOString();
+    const out = `[${timestamp}] ${message}`;
+    // Console and UI
+    try { origSendLog(out); } catch {}
+    // File
+    try { if (logStream && !logStream.destroyed) logStream.write(out + '\n'); } catch {}
+  };
+
+  loadEnvAndConfig();
+
+  // Auto update hooks
+  autoUpdater.autoDownload = true;
+  autoUpdater.on('update-available', (info) => {
+    sendLog(`[UPDATE] Available ${info.version}`);
+    if (mainWindow && mainWindow.webContents) mainWindow.webContents.send('update-available', info);
+  });
+  autoUpdater.on('update-not-available', () => {
+    sendLog('[UPDATE] Not available');
+  });
+  autoUpdater.on('download-progress', (p) => {
+    if (mainWindow && mainWindow.webContents) mainWindow.webContents.send('update-progress', p);
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    sendLog('[UPDATE] Downloaded, will install on restart');
+    if (mainWindow && mainWindow.webContents) mainWindow.webContents.send('update-downloaded', info);
+  });
+  try { autoUpdater.checkForUpdates(); } catch (e) { sendLog(`[UPDATE] check failed: ${e.message}`); }
+
+  // Expose paths to renderer
+  ipcMain.handle('get-paths', async () => ({ dataDir }));
+  // Trigger update from UI
+  ipcMain.on('start-update', async () => {
+    try {
+      autoUpdater.quitAndInstall();
+    } catch (e) {
+      sendLog(`[UPDATE] install failed: ${e.message}`);
+    }
+  });
+
   createWindow();
   startRunner();
 });
@@ -197,7 +258,7 @@ ipcMain.handle('upload-prices-pdf', async (event) => {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, options);
     if (!canceled && filePaths && filePaths.length > 0) {
       const selectedPath = filePaths[0];
-      const destPath = path.join(__dirname, 'data', 'prices.pdf');
+      const destPath = path.join(dataDir, 'prices.pdf');
       fs.copyFileSync(selectedPath, destPath);
       return { success: true };
     } else {
