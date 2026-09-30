@@ -1,0 +1,19 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2015
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "node_activex", "node_activex.vcxproj", "{09359C8E-F7AD-3FF4-B7DE-14BB9F182769}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Release|Win32 = Release|Win32
+		Debug|Win32 = Debug|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{09359C8E-F7AD-3FF4-B7DE-14BB9F182769}.Release|Win32.ActiveCfg = Release|Win32
+		{09359C8E-F7AD-3FF4-B7DE-14BB9F182769}.Release|Win32.Build.0 = Release|Win32
+		{09359C8E-F7AD-3FF4-B7DE-14BB9F182769}.Debug|Win32.ActiveCfg = Debug|Win32
+		{09359C8E-F7AD-3FF4-B7DE-14BB9F182769}.Debug|Win32.Build.0 = Debug|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

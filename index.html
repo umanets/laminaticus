@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAMINATICUS TELEGRAM BOT RUNNER</title>
+    <!-- Google Fonts - Inter for modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for body and overall layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light grey background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Full viewport height */
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling if content overflows */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-lg border border-gray-200">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">LAMINATICUS TELEGRAM BOT RUNNER</h1>
+        <!-- Warning shown when data/error.log exists -->
+        <div id="warningDiv" class="hidden bg-orange-400 text-black p-4 rounded-lg mb-4 text-sm">
+            Немає зв'язку з 1С, запустіть 1С вручну в монопольному режимі та закрийте після цього. Через 5 хвилин зв'язок з 1С повинен бути відновлений і бот почне роботу в нормальному режимі. Або зв'яжіться з розробником.
+        </div>
+
+        <div class="flex flex-col space-y-4 mb-6">
+            <!-- Start Button -->
+            <button id="startButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75">
+                Старт
+            </button>
+            <!-- Stop Button -->
+            <button id="stopButton" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75">
+                Стоп
+            </button>
+            <!-- Upload Prices Button -->
+            <button id="uploadButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                Завантажити прайси
+            </button>
+            <!-- Update Button (shows when update available) -->
+            <div class="flex items-center space-x-3">
+                <button id="updateButton" class="hidden bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75">
+                    Оновити додаток
+                </button>
+                <span id="updateStatus" class="text-sm text-gray-600"></span>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <p class="text-lg font-medium text-gray-700 mb-2">Поточний статус опитування бази:</p>
+            <p id="statusDisplay" class="text-gray-600 text-sm">Loading status...</p>
+        </div>
+
+        <div class="bg-gray-900 text-white p-4 rounded-lg border border-gray-700 h-64 overflow-y-auto mt-6 font-mono text-xs">
+            <div id="logContainer"></div>
+        </div>
+    </div>
+
+    <!-- Floating service button (bottom-right) -->
+    <button id="openDataParentButton" title="Відкрити папку з даними" class="fixed bottom-4 right-4 w-12 h-12 bg-gray-800 hover:bg-gray-700 text-white rounded-md shadow-lg flex items-center justify-center z-50">
+        🗂️
+    </button>
+
+    <!-- Link to your renderer process JavaScript -->
+    <script src="renderer.js"></script>
+</body>
+</html>

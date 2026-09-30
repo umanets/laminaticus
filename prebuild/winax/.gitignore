@@ -1,0 +1,7 @@
+.vscode
+.idea
+node_modules
+npm-debug.log
+test.js
+/data/PERSONS.DBF
+/debug*
